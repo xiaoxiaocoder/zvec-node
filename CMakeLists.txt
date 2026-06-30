@@ -313,6 +313,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
     OUTPUT_NAME "zvec_node_binding"
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_options(${PROJECT_NAME} PRIVATE -fvisibility=hidden -fvisibility-inlines-hidden)
+    target_link_options(${PROJECT_NAME} PRIVATE -Wl,--exclude-libs,ALL)
+endif()
+
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>/jieba_dict"

@@ -20,11 +20,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: x64
-            runner: ubuntu-latest
-            image: quay.io/pypa/manylinux2014_x86_64
-            node_url: https://nodejs.org/dist/v16.17.0/node-v16.17.0-linux-x64.tar.xz
-            cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz
+          # x64 is temporarily disabled; restore this matrix entry when needed.
+          # - arch: x64
+          #   runner: ubuntu-latest
+          #   image: quay.io/pypa/manylinux2014_x86_64
+          #   node_url: https://nodejs.org/dist/v16.17.0/node-v16.17.0-linux-x64.tar.xz
+          #   cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz
           - arch: arm64
             runner: ubuntu-24.04-arm
             image: quay.io/pypa/manylinux2014_aarch64
