@@ -2,6 +2,9 @@ name: Build Linux Node Bindings for glibc 2.23
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/ldd223
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
