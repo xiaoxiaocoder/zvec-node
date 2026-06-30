@@ -43,11 +43,15 @@ jobs:
           docker run --rm \
             -v "$PWD:/work" \
             -w /work \
+            -e HOME=/tmp/zvec-home \
+            -e npm_config_cache=/tmp/zvec-npm-cache \
+            -e CMAKE_JS_CACHE=/tmp/zvec-cmake-js-cache \
             -e NODE_URL="${{ matrix.node_url }}" \
             -e CMAKE_URL="${{ matrix.cmake_url }}" \
             ${{ matrix.image }} \
             /bin/bash -lc '
               set -euxo pipefail
+              mkdir -p "$HOME" "$npm_config_cache" "$CMAKE_JS_CACHE"
               yum install -y libaio-devel xz tar gzip make gcc gcc-c++ curl git python3
               curl -sL "$NODE_URL" | tar xJ -C /usr/local --strip-components=1
               curl -sL "$CMAKE_URL" | tar xz -C /usr/local --strip-components=1
