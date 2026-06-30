@@ -61,6 +61,7 @@ jobs:
               npm --version
               cmake --version
               npm install --ignore-scripts
+              npm install --no-save cmake-js@7.3.0
               npm run build
               ldd packages/bindings-linux-${{ matrix.arch }}/zvec_node_binding.node
               if [ -f packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so ]; then
