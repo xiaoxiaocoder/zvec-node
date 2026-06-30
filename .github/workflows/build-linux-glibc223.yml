@@ -1,0 +1,70 @@
+name: Build Linux Node Bindings for glibc 2.23
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux-bindings:
+    name: Build .node (${{ matrix.arch }}, glibc 2.17+)
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+            image: quay.io/pypa/manylinux2014_x86_64
+            node_url: https://nodejs.org/dist/v16.17.0/node-v16.17.0-linux-x64.tar.xz
+            cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            image: quay.io/pypa/manylinux2014_aarch64
+            node_url: https://nodejs.org/dist/v16.17.0/node-v16.17.0-linux-arm64.tar.xz
+            cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-aarch64.tar.gz
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build binding in manylinux2014
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            -e NODE_URL="${{ matrix.node_url }}" \
+            -e CMAKE_URL="${{ matrix.cmake_url }}" \
+            ${{ matrix.image }} \
+            /bin/bash -lc '
+              set -euxo pipefail
+              yum install -y libaio-devel xz tar gzip make gcc gcc-c++ curl git python3
+              curl -sL "$NODE_URL" | tar xJ -C /usr/local --strip-components=1
+              curl -sL "$CMAKE_URL" | tar xz -C /usr/local --strip-components=1
+              node --version
+              npm --version
+              cmake --version
+              npm install --ignore-scripts
+              npm run build
+              ldd packages/bindings-linux-${{ matrix.arch }}/zvec_node_binding.node
+              if [ -f packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so ]; then
+                ldd packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so
+              fi
+            '
+
+      - name: Upload binding artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindings-linux-${{ matrix.arch }}-glibc217
+          path: |
+            packages/bindings-linux-${{ matrix.arch }}/zvec_node_binding.node
+            packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so
+            packages/bindings-linux-${{ matrix.arch }}/jieba_dict/**
+          if-no-files-found: error
