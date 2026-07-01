@@ -104,11 +104,12 @@ jobs:
                 ldd packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so
               fi
               rm -f zvec_node_binding.node
-              pack_file=$(npm pack --silent packages/bindings-linux-${{ matrix.arch }})
               test_dir=$(mktemp -d)
-              npm install --prefix "$test_dir" --ignore-scripts "./$pack_file"
+              pack_src="$test_dir/bindings-linux-${{ matrix.arch }}"
+              cp -a "packages/bindings-linux-${{ matrix.arch }}" "$pack_src"
+              pack_file=$(cd "$pack_src" && npm pack)
+              npm install --prefix "$test_dir" --ignore-scripts "$pack_src/$pack_file"
               TEST_BINDING_PATH="$test_dir/node_modules/@zvec/bindings-linux-${{ matrix.arch }}" node -e "const binding = require(process.env.TEST_BINDING_PATH); if (!binding.DataType || !binding.CollectionSchema) throw new Error(\"Invalid packaged binding exports\"); console.log(\"packaged binding loaded successfully\")"
-              rm -f "$pack_file"
             '
 
       - name: Upload binding artifacts

@@ -35,9 +35,10 @@ describe('linux glibc build workflow', () => {
 
   it('runs the packaged linux binding before uploading artifacts', () => {
     expect(workflow).toContain('rm -f zvec_node_binding.node');
-    expect(workflow).toContain('pack_file=$(npm pack --silent packages/bindings-linux-${{ matrix.arch }})');
-    expect(workflow).toContain('npm install --prefix "$test_dir" --ignore-scripts "./$pack_file"');
+    expect(workflow).toContain('pack_src="$test_dir/bindings-linux-${{ matrix.arch }}"');
+    expect(workflow).toContain('cp -a "packages/bindings-linux-${{ matrix.arch }}" "$pack_src"');
+    expect(workflow).toContain('pack_file=$(cd "$pack_src" && npm pack)');
+    expect(workflow).toContain('npm install --prefix "$test_dir" --ignore-scripts "$pack_src/$pack_file"');
     expect(workflow).toContain('TEST_BINDING_PATH="$test_dir/node_modules/@zvec/bindings-linux-${{ matrix.arch }}" node -e');
-    expect(workflow).toContain('rm -f "$pack_file"');
   });
 });
