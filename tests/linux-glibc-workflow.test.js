@@ -23,6 +23,16 @@ describe('linux glibc build workflow', () => {
     expect(workflow).toContain('ldd packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so');
   });
 
+  it('caches downloads, npm packages, and ccache artifacts', () => {
+    expect(workflow).toContain('uses: actions/cache@v4');
+    expect(workflow).toContain('.cache/linux-glibc/${{ matrix.arch }}/npm');
+    expect(workflow).toContain('.cache/linux-glibc/${{ matrix.arch }}/cmake-js');
+    expect(workflow).toContain('.cache/linux-glibc/${{ matrix.arch }}/tools');
+    expect(workflow).toContain('.cache/linux-glibc/${{ matrix.arch }}/ccache');
+    expect(workflow).toContain('export CMAKE_COMPILER_LAUNCHER=ccache');
+    expect(workflow).toContain('ccache --show-stats');
+  });
+
   it('runs the packaged linux binding before uploading artifacts', () => {
     expect(workflow).toContain('rm -f zvec_node_binding.node');
     expect(workflow).toContain('pack_file=$(npm pack --silent packages/bindings-linux-${{ matrix.arch }})');

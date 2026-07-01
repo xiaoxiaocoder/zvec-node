@@ -35,6 +35,11 @@ try {
   cmdParts.push(`--parallel=${JOBS}`);
   cmdParts.push('compile');
   cmdParts.push(`--CD=CMAKE_BUILD_TYPE=${BUILD_TYPE}`);
+  const compilerLauncher = process.env.CMAKE_COMPILER_LAUNCHER;
+  if (compilerLauncher) {
+    cmdParts.push(`--CD=CMAKE_C_COMPILER_LAUNCHER=${compilerLauncher}`);
+    cmdParts.push(`--CD=CMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`);
+  }
   const cmd = cmdParts.join(' ');
 
   console.log(`\nCompiling native addon. Jobs: ${JOBS}, Build type: ${BUILD_TYPE}.`);

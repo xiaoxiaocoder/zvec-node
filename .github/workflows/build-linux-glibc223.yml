@@ -38,31 +38,67 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache Linux build dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            .cache/linux-glibc/${{ matrix.arch }}/npm
+            .cache/linux-glibc/${{ matrix.arch }}/cmake-js
+            .cache/linux-glibc/${{ matrix.arch }}/tools
+            .cache/linux-glibc/${{ matrix.arch }}/ccache
+          key: linux-glibc-${{ matrix.arch }}-${{ hashFiles('package-lock.json', 'CMakeLists.txt', 'src/**/*.cc', 'src/**/*.h', 'src/**/*.js') }}
+          restore-keys: |
+            linux-glibc-${{ matrix.arch }}-
+
       - name: Build binding in manylinux2014
         run: |
+          mkdir -p \
+            .cache/linux-glibc/${{ matrix.arch }}/npm \
+            .cache/linux-glibc/${{ matrix.arch }}/cmake-js \
+            .cache/linux-glibc/${{ matrix.arch }}/tools \
+            .cache/linux-glibc/${{ matrix.arch }}/ccache
           docker run --rm \
             -v "$PWD:/work" \
+            -v "$PWD/.cache/linux-glibc/${{ matrix.arch }}/npm:/cache/npm" \
+            -v "$PWD/.cache/linux-glibc/${{ matrix.arch }}/cmake-js:/cache/cmake-js" \
+            -v "$PWD/.cache/linux-glibc/${{ matrix.arch }}/tools:/cache/tools" \
+            -v "$PWD/.cache/linux-glibc/${{ matrix.arch }}/ccache:/cache/ccache" \
             -w /work \
             -e HOME=/tmp/zvec-home \
-            -e npm_config_cache=/tmp/zvec-npm-cache \
+            -e npm_config_cache=/cache/npm \
             -e npm_config_unsafe_perm=true \
-            -e CMAKE_JS_CACHE=/tmp/zvec-cmake-js-cache \
+            -e CMAKE_JS_CACHE=/cache/cmake-js \
+            -e CCACHE_DIR=/cache/ccache \
+            -e CCACHE_MAXSIZE=2G \
             -e NODE_URL="${{ matrix.node_url }}" \
             -e CMAKE_URL="${{ matrix.cmake_url }}" \
             ${{ matrix.image }} \
             /bin/bash -lc '
               set -euxo pipefail
-              mkdir -p "$HOME/.cmake-js" "$npm_config_cache" "$CMAKE_JS_CACHE"
-              chmod -R 777 "$HOME" "$npm_config_cache" "$CMAKE_JS_CACHE"
-              yum install -y libaio-devel xz tar gzip make gcc gcc-c++ curl git python3
-              curl -sL "$NODE_URL" | tar xJ -C /usr/local --strip-components=1
-              curl -sL "$CMAKE_URL" | tar xz -C /usr/local --strip-components=1
+              mkdir -p "$HOME/.cmake-js" "$npm_config_cache" "$CMAKE_JS_CACHE" /cache/tools "$CCACHE_DIR"
+              chmod -R 777 "$HOME" "$npm_config_cache" "$CMAKE_JS_CACHE" /cache/tools "$CCACHE_DIR"
+              yum install -y libaio-devel xz tar gzip make gcc gcc-c++ curl git python3 ccache || yum install -y libaio-devel xz tar gzip make gcc gcc-c++ curl git python3
+              if command -v ccache >/dev/null 2>&1; then
+                export CMAKE_COMPILER_LAUNCHER=ccache
+              fi
+              node_archive="/cache/tools/$(basename "$NODE_URL")"
+              cmake_archive="/cache/tools/$(basename "$CMAKE_URL")"
+              if [ ! -f "$node_archive" ]; then
+                curl -sL "$NODE_URL" -o "$node_archive"
+              fi
+              if [ ! -f "$cmake_archive" ]; then
+                curl -sL "$CMAKE_URL" -o "$cmake_archive"
+              fi
+              tar xJf "$node_archive" -C /usr/local --strip-components=1
+              tar xzf "$cmake_archive" -C /usr/local --strip-components=1
               node --version
               npm --version
               cmake --version
               npm install --ignore-scripts
               npm install --no-save cmake-js@7.3.0
+              if command -v ccache >/dev/null 2>&1; then ccache --zero-stats; fi
               npm run build
+              if command -v ccache >/dev/null 2>&1; then ccache --show-stats; fi
               ldd packages/bindings-linux-${{ matrix.arch }}/zvec_node_binding.node
               if [ -f packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so ]; then
                 ldd packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so
