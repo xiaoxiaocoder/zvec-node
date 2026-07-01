@@ -20,12 +20,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # x64 is temporarily disabled; restore this matrix entry when needed.
-          # - arch: x64
-          #   runner: ubuntu-latest
-          #   image: quay.io/pypa/manylinux2014_x86_64
-          #   node_url: https://nodejs.org/dist/v16.17.0/node-v16.17.0-linux-x64.tar.xz
-          #   cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz
+          - arch: x64
+            runner: ubuntu-latest
+            image: quay.io/pypa/manylinux2014_x86_64
+            node_url: https://nodejs.org/dist/v16.17.0/node-v16.17.0-linux-x64.tar.xz
+            cmake_url: https://cmake.org/files/v3.27/cmake-3.27.9-linux-x86_64.tar.gz
           - arch: arm64
             runner: ubuntu-24.04-arm
             image: quay.io/pypa/manylinux2014_aarch64
@@ -68,6 +67,12 @@ jobs:
               if [ -f packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so ]; then
                 ldd packages/bindings-linux-${{ matrix.arch }}/libzvec_diskann_plugin.so
               fi
+              rm -f zvec_node_binding.node
+              pack_file=$(npm pack --silent packages/bindings-linux-${{ matrix.arch }})
+              test_dir=$(mktemp -d)
+              npm install --prefix "$test_dir" --ignore-scripts "./$pack_file"
+              TEST_BINDING_PATH="$test_dir/node_modules/@zvec/bindings-linux-${{ matrix.arch }}" node -e "const binding = require(process.env.TEST_BINDING_PATH); if (!binding.DataType || !binding.CollectionSchema) throw new Error(\"Invalid packaged binding exports\"); console.log(\"packaged binding loaded successfully\")"
+              rm -f "$pack_file"
             '
 
       - name: Upload binding artifacts
